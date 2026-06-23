@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { Zap, Moon, Sun, Menu, LogIn } from "lucide-react";
 import { useSession } from "next-auth/react";
 import AuthModal from "./AuthModal";
@@ -18,34 +17,41 @@ export default function Header({ theme, onToggleTheme, onToggleSidebar, onLogoCl
   const [showAuth, setShowAuth] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
 
-  const openLogin = () => { setAuthTab("login"); setShowAuth(true); };
+  const openLogin = () => {
+    setAuthTab("login");
+    setShowAuth(true);
+  };
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="w-full flex items-center justify-between h-16 px-4 md:px-6">
-
+      <header className="sticky top-0 z-40 w-full pt-4 px-4 md:px-8 bg-transparent pointer-events-none">
+        {/* Floating Capsule with Navy Dark background in both themes for supreme look */}
+        <div className="pointer-events-auto max-w-7xl mx-auto bg-[#0a1128]/90 backdrop-blur-xl border border-white/10 rounded-full px-5 md:px-6 py-3.5 flex items-center justify-between shadow-xl shadow-black/20 text-white">
+          
           {/* Left: Hamburger + Logo */}
           <div className="flex items-center gap-3">
             {onToggleSidebar && (
               <button
                 onClick={onToggleSidebar}
-                className="p-2 -ml-2 rounded-xl text-muted hover:text-foreground hover:bg-accent-light/50 transition-colors"
+                className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
                 title="Toggle Sidebar"
               >
                 <Menu className="w-5 h-5" />
               </button>
             )}
 
-            <button onClick={onLogoClick} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity text-left">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent text-accent-foreground shadow-sm shrink-0">
-                <Zap className="w-4 h-4" />
+            <button
+              onClick={onLogoClick}
+              className="flex items-center gap-2.5 hover:opacity-85 transition-opacity text-left cursor-pointer"
+            >
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-accent text-white shadow-sm shrink-0">
+                <Zap className="w-4 h-4 fill-white" />
               </div>
               <div>
-                <span className="font-bold text-sm tracking-tight text-foreground block">
+                <span className="font-bold text-sm tracking-tight text-white block">
                   RapihinAI
                 </span>
-                <span className="text-[10px] text-muted tracking-wider block font-semibold uppercase">
+                <span className="text-[9px] text-slate-400 tracking-wider block font-semibold uppercase leading-none mt-0.5">
                   MVP v1.0
                 </span>
               </div>
@@ -57,7 +63,7 @@ export default function Header({ theme, onToggleTheme, onToggleSidebar, onLogoCl
             {!session && (
               <button
                 onClick={openLogin}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-accent text-white hover:opacity-90 rounded-xl transition-all shadow-sm shadow-accent/20 active:scale-95"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-accent hover:bg-accent/90 text-white rounded-full transition-all shadow-md shadow-accent/25 active:scale-95 cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 Masuk
@@ -66,10 +72,10 @@ export default function Header({ theme, onToggleTheme, onToggleSidebar, onLogoCl
 
             <button
               onClick={onToggleTheme}
-              className="ios-spring p-2.5 rounded-xl border border-border text-foreground hover:bg-accent-light/50 active:scale-95"
+              className="ios-spring p-2 rounded-full border border-white/10 text-slate-200 hover:bg-white/10 hover:text-white active:scale-95 cursor-pointer"
               aria-label="Toggle theme"
             >
-              {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              {theme === "light" ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>

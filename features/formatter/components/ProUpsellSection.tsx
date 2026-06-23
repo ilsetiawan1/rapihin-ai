@@ -13,8 +13,8 @@ export default function ProUpsellSection({ onShowPricing }: ProUpsellSectionProp
     <section className="
       bg-card border-t border-border
       flex flex-col
-      lg:h-[calc(100vh-64px)] lg:overflow-hidden
-      scroll-snap-align-start
+      lg:h-screen lg:overflow-hidden
+      pt-20 lg:pt-24
     ">
       {/* Centered Content Container */}
       <div className="flex-1 flex flex-col justify-center items-center max-w-4xl w-full mx-auto px-4 md:px-8 py-8 gap-6 text-center">

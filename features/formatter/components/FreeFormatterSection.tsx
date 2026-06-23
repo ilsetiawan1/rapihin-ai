@@ -24,12 +24,11 @@ export default function FreeFormatterSection({
   return (
     <section className="
       flex flex-col
-      lg:h-[calc(100vh-64px)] lg:overflow-hidden
+      lg:h-screen lg:overflow-hidden
       max-w-7xl w-full mx-auto
       px-4 md:px-8
-      pt-5 pb-3 lg:pb-0
+      pt-20 lg:pt-24 pb-3 lg:pb-4
       gap-4
-      scroll-snap-align-start
     ">
       {/* ── Hero Text (compact, shrink-0) ── */}
       <div className="shrink-0 text-center">
