@@ -82,8 +82,8 @@ model VerificationToken {
 // Logging & Telemetry
 model Activity {
   id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   actionType String   // "LAYOUT_FIX", "AI_REVIEW", "TOC_SYNC", "TOP_UP"
   tokenCost  Int      @default(0)
   fileSize   Int?     // bytes

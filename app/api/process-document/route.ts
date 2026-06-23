@@ -126,11 +126,11 @@ export async function POST(req: NextRequest) {
     // ── 4. Log Telemetry (fire & forget) ──
     try {
       const { prisma } = await import("@/lib/prisma");
-      await (prisma as any).telemetryLog.create({
+      await (prisma as any).activity.create({
         data: {
-          event: "document_formatted",
-          templateId: config.id || "unknown",
-          fileName: file.name.slice(-20),
+          actionType: "LAYOUT_FIX",
+          fileSize: file.size,
+          status: "SUCCESS",
         },
       });
     } catch (_) {

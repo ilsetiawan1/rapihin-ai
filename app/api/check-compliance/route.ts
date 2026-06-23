@@ -239,11 +239,11 @@ export async function POST(req: NextRequest) {
     // ── Log Telemetry (fire & forget) ────────────────────────────
     try {
       const { prisma } = await import("@/lib/prisma");
-      await (prisma as any).telemetryLog.create({
+      await (prisma as any).activity.create({
         data: {
-          event: "compliance_checked",
-          templateId: config.id || "unknown",
-          fileName: file.name.slice(-20), // store only tail of name for privacy
+          actionType: "COMPLIANCE_CHECK",
+          fileSize: file.size,
+          status: "SUCCESS",
         },
       });
     } catch (_) {

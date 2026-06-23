@@ -1,27 +1,33 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
 }
 
-// ── NextAuth Models ──
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Peran Pengguna (Authorization)
+enum Role {
+  USER
+  ADMIN
+}
+
+// NextAuth.js Standard Models
 model Account {
   id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
+  id_token          String? @db.Text
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -43,11 +49,19 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-
   accounts      Account[]
   sessions      Session[]
-  chats         ChatSession[]
-  telemetry     TelemetryLog[]
+
+  // Peran Akun (User-first vs Backoffice Admin)
+  role          Role      @default(USER)
+
+  // Saldo Token Akun untuk Fitur AI Pro
+  tokens        Int       @default(5) // Bonus kuota awal gratis setelah login Google
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  activities    Activity[]
 }
 
 model VerificationToken {
@@ -58,34 +72,17 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// ── RapihinAI Models ──
-model ChatSession {
-  id        String    @id @default(cuid())
-  title     String
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages  Message[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
+// Logging & Telemetry
+model Activity {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actionType String   // "LAYOUT_FIX", "AI_REVIEW", "TOC_SYNC", "TOP_UP"
+  tokenCost  Int      @default(0)
+  fileSize   Int?     // bytes
+  durationMs Int?
+  status     String   // "SUCCESS", "FAILED"
+  createdAt  DateTime @default(now())
 
-model Message {
-  id             String      @id @default(cuid())
-  role           String      // 'user' or 'assistant'
-  content        String
-  fileAttachment String?
-  chatSessionId  String
-  chatSession    ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
-  createdAt      DateTime    @default(now())
-}
-
-// ── KPI Telemetry (PRD Analytics) ──
-model TelemetryLog {
-  id           String   @id @default(cuid())
-  event        String   // e.g. "document_formatted", "compliance_checked"
-  templateId   String?  // which template was used
-  fileName     String?  // anonymized filename
-  userId       String?
-  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt    DateTime @default(now())
+  @@index([userId])
 }
