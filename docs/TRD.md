@@ -1,11 +1,10 @@
-# Technical Requirement Document (TRD) - MVP V1.0
-## Nama Produk: RapihinAI / ThesisFlow AI
+# Technical Requirement Document (TRD) - RapihinAI MVP
 
 ---
 
 ## 1. System Architecture & Data Flow
 
-Sistem dikembangkan menggunakan arsitektur full-stack modern Next.js. Pemrosesan berkas `.docx` dilakukan secara ephemeral di memori server tanpa penyimpanan jangka panjang pada disk (untuk pengguna reguler).
+Sistem dikembangkan menggunakan arsitektur full-stack modern Next.js. Pemrosesan berkas `.docx` dilakukan secara ephemeral di memori server tanpa penyimpanan jangka panjang pada disk (untuk keamanan & privasi data pengguna).
 
 ### Data Flow Diagram (Mermaid)
 
@@ -13,99 +12,96 @@ Sistem dikembangkan menggunakan arsitektur full-stack modern Next.js. Pemrosesan
 sequenceDiagram
     autonumber
     actor User as Pengguna (Browser)
-    participant FE as Frontend (Next.js client)
-    participant BE as Backend (Server Actions / Route Handlers)
+    participant FE as Frontend (Next.js Client)
+    participant BE as Backend (Route Handlers)
+    participant Gemini as Gemini 2.5 Flash API
     participant DB as Database (PostgreSQL)
 
-    User->>FE: Upload file .docx & pilih template/margin
-    Note over FE: Validasi ukuran (< 20MB)<br/>dan tipe berkas
-    FE->>BE: POST /api/format (Multipart FormData)
-    
-    Note over BE: Baca file sebagai Buffer (RAM)
-    BE->>BE: Jalankan Parser & Compliance Checker (mammoth.js + Regex)
-    
-    alt Jika hanya Compliance Check (Preview)
-        BE-->>FE: Return JSON (Poin-poin ketidaksesuaian)
-        FE-->>User: Tampilkan Dashboard Kepatuhan (Compliance Panel)
+    User->>FE: Upload file .docx
+    FE->>BE: POST /api/check-compliance (Multipart Form)
+    Note over BE: Parse berkas via mammoth.js & Regex
+    BE-->>FE: Return JSON status format (Margin, Font, Spasi, Bab)
+    FE-->>User: Tampilkan Checklist Kepatuhan (Compliance Panel)
+
+    alt Run Free Auto-Layout
+        User->>FE: Klik "Rapikan Dokumen"
+        FE->>BE: POST /api/process-document (Rule-based)
+        Note over BE: Ubah XML (jszip): w:pgMar & w:rFonts
+        BE-->>FE: Stream biner (.docx hasil perbaikan layout)
+        FE-->>User: Download file hasil rapi secara instan
+    else Run Pro AI features (Requires Login & Tokens)
+        User->>FE: Klik "Review Konten Akademik" / "TOC Sync"
+        Note over FE: Cek status auth. Jika belum masuk, trigger Google OAuth
+        User->>FE: Login via Google Account
+        FE->>DB: Daftarkan User / Ambil saldo Token (NextAuth)
+        
+        FE->>BE: POST /api/chat atau POST /api/process-document (AI Mode)
+        BE->>DB: Verifikasi & potong saldo Token User
+        BE->>Gemini: Kirim XML Run Teks / Daftar Isi untuk diproses
+        Gemini-->>BE: Return hasil perbaikan konten / TOC mapping
+        Note over BE: Inject kembali ke XML dokumen via jszip & xmldom
+        BE-->>FE: Stream biner (.docx hasil perbaikan AI)
+        FE-->>User: Download file hasil revisi Pro
     end
-    
-    Note over BE: Jalankan Formatting Engine (jszip + XML Modifier)
-    Note over BE: Override tag XML: w:pgMar (margin), w:rFonts (font), w:spacing (spasi)
-    
-    alt Pengguna terautentikasi (Pro/Free Kuota)
-        BE->>DB: Log Transaksi / Kurangi Kuota Bulanan
-    end
-    
-    BE-->>FE: Return binary stream (.docx hasil perbaikan)
-    Note over FE: Trigger download file secara otomatis di browser
-    FE-->>User: File "Repaired.docx" terunduh secara instan
 ```
 
 ---
 
 ## 2. API Contract & Endpoints Specifications
 
-### 2.1. Format & Standardize Document
-* **Endpoint:** `POST /api/format`
+### 2.1. Check Document Compliance
+* **Endpoint:** `POST /api/check-compliance`
 * **Content-Type:** `multipart/form-data`
 * **Request Payload:**
-  * `file`: File Binary (Nama parameter: `file`, tipe: `.docx`, ukuran maksimal 20MB)
-  * `templateId`: String (ID template dari preset, e.g., `"standard"` atau `"custom"`)
-  * `customMarginTop`: String/Float (Opsional, dalam cm, e.g., `4.0`)
-  * `customMarginBottom`: String/Float (Opsional, dalam cm, e.g., `3.0`)
-  * `customMarginLeft`: String/Float (Opsional, dalam cm, e.g., `4.0`)
-  * `customMarginRight`: String/Float (Opsional, dalam cm, e.g., `3.0`)
-  * `fontFamily`: String (Opsional, e.g., `"Times New Roman"`. Catatan: font selain Times New Roman memerlukan akun Pro)
-  * `fontSize`: String/Int (Opsional, e.g., `12`)
-  * `lineSpacing`: String/Float (Opsional, e.g., `1.5`, `2.0`)
-
-* **Response (Success - Binary File Download):**
-  * **Status:** `200 OK`
-  * **Headers:**
-    * `Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document`
-    * `Content-Disposition: attachment; filename="Repaired_Thesis.docx"`
-  * **Body:** Stream data binary `.docx` hasil manipulasi XML.
-
-* **Response (Error / Format Gagal):**
-  * **Status:** `400 Bad Request` atau `500 Internal Server Error`
-  * **Content-Type:** `application/json`
-  * **Body:**
-    ```json
-    {
-      "success": false,
-      "errorCode": "INVALID_FILE_FORMAT",
-      "message": "Berkas yang diunggah harus memiliki format .docx asli.",
-      "details": null
-    }
-    ```
-
-### 2.2. Get Document Templates (Preset List)
-* **Endpoint:** `GET /api/templates`
-* **Content-Type:** `application/json`
-* **Response (Success):**
+  * `file`: File Binary (docx, max 20MB)
+  * `config`: Stringified JSON (e.g., `{"id":"standard","fontFamily":"Times New Roman","fontSize":12,"lineSpacing":1.5}`)
+* **Response (Success - JSON):**
   * **Status:** `200 OK`
   * **Body:**
     ```json
     {
-      "success": true,
-      "data": [
+      "overallStatus": "needs_revision",
+      "issueCount": 3,
+      "items": [
         {
-          "id": "standard",
-          "name": "Template Standar Akademik (General)",
-          "margins": { "top": 4, "bottom": 3, "left": 4, "right": 3 },
-          "primaryFont": "Times New Roman",
-          "primaryFontSize": 12,
-          "lineSpacing": 1.5
+          "id": "margin",
+          "label": "Batas Margin Halaman",
+          "status": "warning",
+          "detected": "Kiri 3cm, Kanan 3cm, Atas 3cm, Bawah 3cm",
+          "expected": "Kiri 4cm, Kanan 3cm, Atas 4cm, Bawah 3cm",
+          "desc": "Dokumen Anda menggunakan margin default. Kami akan menyesuaikan ukurannya."
         }
       ]
     }
     ```
 
+### 2.2. Auto-Format & AI Document Processing
+* **Endpoint:** `POST /api/process-document`
+* **Content-Type:** `multipart/form-data`
+* **Request Payload:**
+  * `file`: File Binary (docx, max 20MB)
+  * `config`: Stringified JSON template settings
+  * `mode`: String (`"layout"` untuk gratis, `"ai_review"` atau `"toc_sync"` untuk Pro)
+* **Response (Success - Binary File Download):**
+  * **Status:** `200 OK`
+  * **Headers:**
+    * `Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+    * `Content-Disposition: attachment; filename="RapihinAI_Hasil.docx"`
+  * **Body:** Stream data binary `.docx` hasil manipulasi XML.
+
+### 2.3. AI Chat Assistance & Context (Gemini 2.5 Flash)
+* **Endpoint:** `POST /api/chat`
+* **Content-Type:** `application/json`
+* **Request Payload:**
+  * `messages`: Array of chat messages
+  * `fileContext`: Object (Optional, context file details)
+* **Response:** Server-Sent Events (SSE) stream returning markdown text generated by Gemini.
+
 ---
 
 ## 3. Database Schema (Prisma ORM & PostgreSQL)
 
-Database digunakan terutama untuk keperluan analitik KPI, otorisasi pengguna (tingkatan akun Free vs Pro), manajemen kuota, dan pencatatan audit log penggunaan template untuk dasbor pengelola.
+Database menggunakan skema **NextAuth.js standard** yang diperluas untuk mencatat saldo **Token** pengguna dan histori telemetry.
 
 ```prisma
 datasource db {
@@ -117,39 +113,72 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum UserTier {
-  FREE
-  PRO
+// NextAuth.js Standard Models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  name         String?
-  tier         UserTier   @default(FREE)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  
-  // Kuota Upload bulanan (misal: Free 2x per bulan)
-  uploadLimit  Int        @default(2)
-  uploadUsed   Int        @default(0)
-  resetDate    DateTime   // Tanggal reset kuota bulanan
-  
-  activities   Activity[]
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+
+  // Custom RapihinAI Fields
+  tokens        Int       @default(5) // Saldo token awal gratis
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  activities    Activity[]
 }
 
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Logging & Telemetry
 model Activity {
-  id         String   @id @default(uuid())
+  id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  templateId String   // Template yang digunakan (e.g. "standard", "custom")
-  fileSize   Int      // Ukuran berkas dalam bytes
-  durationMs Int      // Durasi pemrosesan di server dalam milidetik
-  status     String   // "SUCCESS" atau "FAILED"
+  actionType String   // "LAYOUT_FIX", "AI_REVIEW", "TOC_SYNC", "TOP_UP"
+  tokenCost  Int      @default(0)
+  fileSize   Int?     // bytes
+  durationMs Int?
+  status     String   // "SUCCESS", "FAILED"
   createdAt  DateTime @default(now())
 
   @@index([userId])
-  @@index([createdAt])
 }
 ```
 
@@ -158,108 +187,24 @@ model Activity {
 ## 4. Core Logic & Library Specifications
 
 ### 4.1. Library Dependency List
-* **`mammoth`** (`npm i mammoth`): Digunakan khusus untuk mengekstrak teks mentah (raw text) dari berkas `.docx` dengan performa tinggi. Ekstraksi teks ini diperlukan untuk melakukan pencocokan struktur dokumen (Bab & Sub-Bab) menggunakan *Regex*.
-* **`jszip`** (`npm i jszip`): Digunakan untuk membongkar (unzip) berkas `.docx` (karena berkas `.docx` pada dasarnya adalah arsip ZIP yang berisi dokumen-dokumen XML) di dalam memori, memanipulasi file XML di dalamnya, dan mengepaknya kembali menjadi `.docx` valid.
-* **`fast-xml-parser`** atau **`xmldom`** (`npm i xmldom`): Digunakan sebagai DOM parser untuk mencari dan mengubah elemen-elemen XML WordprocessingML secara aman.
+* **`next-auth`**: Autentikasi Google OAuth secara native di Next.js.
+* **`ai` & `@ai-sdk/google`**: SDK Vercel AI untuk memanggil model `gemini-2.5-flash` dengan performa stream tinggi.
+* **`jszip`**: Ekstraksi dan pengemasan kembali file `.docx` XML in-memory.
+* **`xmldom`**: Parsing string XML ke objek DOM untuk manipulasi node-node Word (`w:r`, `w:p`, dsb).
 
-### 4.2. Algoritma Kepatuhan & Manipulasi XML (Core Engine)
-1. **Unzipping berkas `.docx`:** 
-   - Membaca buffer biner dari *request* menggunakan `jszip`.
-   - Mengambil file utama `word/document.xml`.
-2. **Ekstraksi & Analisis Teks (Regex Matching):**
-   - Jalankan `mammoth` untuk mengekstrak teks mentah guna mendeteksi keberadaan:
-     - Bab Utama: `/\b(BAB\s+[IVXLCDM]+)\b/i`
-     - Sub-bab: `/^([1-9]\.[0-9]+)\s+([A-Za-z\s]+)/m`
-     - Daftar Pustaka: `/\b(Daftar\s+Pustaka|Referensi|Bibliography)\b/i`
-3. **Manipulasi Node XML (`word/document.xml` & `word/styles.xml`):**
-   - **Margins (Page Margin):**
-     Cari tag `<w:pgMar>` di dalam XML bagian `<w:sectPr>` (Section Properties).
-     Rumus konversi cm ke unit Word (Twips: $1\text{ cm} = 567\text{ twips}$):
-     $$\text{twips} = \text{cm} \times 567$$
-     Ubah atribut:
-     - `w:top`, `w:bottom`, `w:left`, `w:right` sesuai konversi twips di atas.
-   - **Font Override:**
-     Ubah deklarasi font pada tag `<w:rFonts>` di dalam objek Run Properties (`<w:rPr>`) di dalam dokumen dan style utama (`word/styles.xml`):
-     - Ubah `w:ascii` dan `w:hAnsi` menjadi font target (e.g., `Times New Roman`).
-   - **Spasi Baris (Line Spacing):**
-     Ubah tag `<w:spacing>` pada objek Paragraph Properties (`<w:pPr>`):
-     - Ubah atribut `w:line` dan `w:lineRule` (e.g., $1.5\text{ spasi} = 360$ unit, $2.0\text{ spasi} = 240$ unit jika auto).
+### 4.2. XML Preservation Engine (AI Text Editing)
+Tantangan terbesar mengedit dokumen Word menggunakan AI adalah menjaga agar gaya pemformatan (seperti teks *bold*, *italic*, pewarnaan, dan hyperlink) tidak hilang setelah teks diganti oleh AI.
+* **Solusi Per-Run Element:**
+  Sistem tidak mengirimkan file XML mentah langsung ke AI. Sebaliknya:
+  1. File `word/document.xml` dibongkar.
+  2. Sistem membaca tag paragraf `<w:p>`. Di dalam paragraf terdapat sub-elemen run `<w:r>` yang membungkus teks `<w:t>`.
+  3. Sistem hanya mengekstrak konten teks murni untuk direview oleh AI.
+  4. AI mengembalikan teks hasil revisi beserta peta perubahan (*diff mapping*).
+  5. Sistem mengganti konten di dalam tag `<w:t>` secara selektif dengan mempertahankan pembungkus gaya `<w:rPr>` (Run Properties) aslinya.
 
-### 4.3. Batasan Teknis & System Constraints
-* **Maksimum Ukuran Berkas:** 20MB. Berkas di atas limit akan otomatis ditolak di tingkat Route Handler sebelum diproses (mencegah *Out-of-Memory* pada serverless platform).
-* **Execution Timeout:** Maksimal 30 detik. Proses reparasi harus diselesaikan dalam rentang waktu tersebut untuk mencegah pemutusan koneksi serverless.
-
----
-
-## 5. Data Privacy & Security Guardrails
-
-Karena berkas skripsi/tesis bersifat sensitif dan rahasia sebelum dipublikasikan, pengamanan data diprioritaskan dengan aturan ketat:
-
-1. **Pemrosesan Ephemeral (In-Memory Buffer):**
-   - Berkas `.docx` yang diunggah dikonversi menjadi buffer di memori RAM dan dimanipulasi langsung di memori menggunakan `jszip`.
-   - **Tidak ada berkas yang ditulis ke dalam penyimpanan fisik (*Hard Disk*) lokal server** atau penyimpanan awan (*Cloud Object Storage* seperti S3/GCS) selama pemrosesan.
-2. **Garbage Collection & Memory Deallocation:**
-   - Setelah berkas hasil perbaikan dikirim kembali sebagai HTTP binary response, variabel buffer langsung di-set ke `null` atau dibiarkan masuk ke mekanisme *garbage collection* Node.js secara otomatis.
-3. **Data Transit Security:**
-   - Seluruh proses komunikasi data antara client dan server wajib dienkripsi menggunakan protokol **HTTPS (SSL/TLS 1.3)**.
-4. **Isolasi Log Identifikasi:**
-   - Log aplikasi di server (seperti CloudWatch atau Vercel logs) tidak boleh mencatat nama berkas asli, isi dokumen, maupun informasi pribadi sensitif pengguna. Hanya metrik ukuran berkas (bytes) dan waktu pemrosesan yang dicatat untuk kebutuhan pemantauan performa sistem.
-
----
-
-## 6. Folder Structure (Layered Architecture)
-
-Untuk memastikan kode terkelompok dengan baik berdasarkan tanggung jawabnya (Separation of Concerns), proyek ini menggunakan struktur folder berlapis (*layered architecture*):
-
-```text
-rapihin-ai/
-├── app/                        # Next.js App Router (Routing & Pages)
-│   ├── api/                    # API Route Handlers
-│   │   ├── format/
-│   │   │   └── route.ts        # POST /api/format
-│   │   └── templates/
-│   │       └── route.ts        # GET /api/templates
-│   ├── layout.tsx              # Root Layout
-│   └── page.tsx                # Landing & Upload Page
-├── components/                 # Global & Shared UI (Presentational Components)
-│   ├── ui/                     # Shadcn UI (Atomic components: Button, Card, Dialog, etc.)
-│   ├── shared/                 # Shared layouts (Header, Footer, Sidebar)
-│   └── providers.tsx           # Global app providers (React Query, etc.)
-├── features/                   # Self-Contained Domain Features (Root-level Features)
-│   └── formatter/              # Feature domain for document formatting
-│       ├── components/         # Feature-specific components
-│       │   ├── Dropzone.tsx        # Upload area ala AirDrop
-│       │   ├── CompliancePanel.tsx # Dashboard laporan ketidaksesuaian format
-│       │   ├── TemplateSelector.tsx# Form/Pemilih template kampus
-│       │   ├── ProcessingModal.tsx # Fullscreen loading modal
-│       │   └── Pricing.tsx         # Pricing plans section
-│       ├── actions/            # Feature-specific server actions or API utilities
-│       └── repository/         # Feature-specific database queries/repositories
-├── services/                   # Business Logic Layer (Otak Aplikasi/Core Engine)
-│   ├── parser/
-│   │   └── compliance.ts       # Deteksi Bab/Sub-bab (mammoth.js + Regex)
-│   ├── formatter/
-│   │   ├── docx-formatter.ts   # Manipulasi XML (jszip + w:pgMar/w:rFonts overrides)
-│   │   └── units.ts            # Utilitas konversi unit (e.g., cm to twips)
-│   └── db/
-│       └── quota.ts            # Pengecekan & pembaruan kuota upload pengguna di PostgreSQL
-├── hooks/                      # Custom React Hooks (State & Async Fetching)
-│   ├── useTemplates.ts         # GET /api/templates menggunakan React Query
-│   └── useFormatDocument.ts    # Mutation POST /api/format menggunakan React Query
-├── lib/                        # Global Libraries Initialization & Config
-│   ├── prisma.ts               # Prisma Client Singleton instance
-│   └── query-client.ts         # QueryClient config (React Query)
-├── prisma/                     # Database Schema & Migrations
-│   └── schema.prisma           # Skema Prisma untuk PostgreSQL
-├── types/                      # TypeScript Types & Interfaces
-│   ├── index.ts                # Global type exports
-│   └── document.ts             # Definisi tipe berkas, hasil compliance, & config template
-├── docs/                       # Dokumentasi Proyek
-│   ├── PRD.md
-│   ├── TRD.md                  # Dokumen Persyaratan Teknis (File ini)
-│   ├── DESIGN.md               # Panduan Desain & UI/UX
-│   └── prd-visual.html         # Visual PRD interaktif
-├── package.json
-└── tsconfig.json
-```
-
+### 4.3. Table of Contents (TOC) Synchronizer Logic
+TOC Microsoft Word menggunakan *fields* XML khusus (`INSTR "TOC \o '1-3' \h \z \u"`).
+* **Solusi Singkronisasi:**
+  1. Sistem melakukan pemindaian halaman di memori untuk menghitung estimasi tinggi konten berdasarkan jumlah karakter per halaman (asumsi standard $300\text{ kata} \approx 1\text{ halaman}$ pada margin 4-3-4-3).
+  2. Mendeteksi lokasi header Bab (`BAB I`, `BAB II`) dan Sub-bab.
+  3. Memperbarui field nomor halaman pada entri Daftar Isi di dalam XML menggunakan parser DOM, menyamakan nomor halaman hasil estimasi dengan entri di tabel TOC.
