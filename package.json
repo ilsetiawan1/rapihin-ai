@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.83",
+    "@ai-sdk/react": "^3.0.210",
     "@auth/prisma-adapter": "^2.11.2",
+    "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@tanstack/react-query": "^5.101.0",
     "ai": "^6.0.208",
@@ -19,6 +21,7 @@
     "mammoth": "^1.12.0",
     "next": "16.2.9",
     "next-auth": "^4.24.14",
+    "pg": "^8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "xmldom": "^0.6.0",

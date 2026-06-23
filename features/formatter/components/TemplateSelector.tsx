@@ -74,7 +74,7 @@ export default function TemplateSelector({ onConfigChange, compact = false }: Te
   const isCustom = selectedId === "custom";
 
   return (
-    <div className={`flex flex-col gap-6 w-full ${!compact ? "bg-card text-card-foreground p-2" : ""}`}>
+    <div className="flex flex-col gap-6 w-full">
       
       {/* ── Preset Selector ── */}
       <div className="relative">
@@ -200,7 +200,7 @@ export default function TemplateSelector({ onConfigChange, compact = false }: Te
 
       {/* Info Banner */}
       {!isCustom && (
-        <div className="flex items-center justify-center p-3 rounded-xl bg-accent-light/50 border border-accent/20 text-xs font-medium text-muted">
+        <div className="flex items-center justify-center p-3 rounded-xl bg-accent-light/50 border border-accent/20 text-xs font-medium text-muted mb-2">
           <Settings className="w-3.5 h-3.5 mr-2 text-accent" />
           Setelan dikunci pada mode <strong>&nbsp;{selectedPreset.name}&nbsp;</strong>. Pilih mode kustom untuk mengubah.
         </div>

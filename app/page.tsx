@@ -14,6 +14,7 @@ export default function Home() {
   const [config, setConfig] = useState<TemplateConfig | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [chatSessionId, setChatSessionId] = useState<number>(Date.now());
 
   // Modal & Processing States
   const [showModal, setShowModal] = useState(false);
@@ -112,7 +113,13 @@ export default function Home() {
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
       {/* ── App Sidebar ── */}
-      <Sidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)} 
+        onNewChat={() => setChatSessionId(Date.now())}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
 
       {/* ── Main Content Area ── */}
       <div className="flex-1 flex flex-col h-full min-w-0">
@@ -120,6 +127,7 @@ export default function Home() {
           theme={theme} 
           onToggleTheme={toggleTheme} 
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
+          onLogoClick={() => setChatSessionId(Date.now())}
         />
 
         <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 flex flex-col items-center">
@@ -128,6 +136,7 @@ export default function Home() {
             {/* Chat Panel Area */}
             <div className={`flex-1 w-full h-full max-h-[800px] flex items-center justify-center transition-all duration-500`}>
               <ChatPanel
+                key={chatSessionId}
                 onConfigChange={setConfig}
                 onProcessDocument={handleProcessDocument}
                 onFileSelect={setSelectedFile}
@@ -138,7 +147,7 @@ export default function Home() {
             {/* Compliance Panel Area (Only shows when file is selected) */}
             {selectedFile && (
               <div className="w-full lg:w-[360px] xl:w-[400px] shrink-0 flex flex-col gap-5 animate-in fade-in slide-in-from-right-8 duration-500 max-h-[800px]">
-                {config && <CompliancePanel fileName={selectedFile.name} config={config} />}
+                {config && <CompliancePanel fileName={selectedFile.name} config={config} file={selectedFile} />}
 
                 <button
                   onClick={handleProcessDocument}

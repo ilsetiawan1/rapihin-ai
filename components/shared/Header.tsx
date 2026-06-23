@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { Zap, Moon, Sun, Menu, LogIn } from "lucide-react";
 import { useSession } from "next-auth/react";
 import AuthModal from "./AuthModal";
@@ -9,9 +10,10 @@ interface HeaderProps {
   theme: "light" | "dark";
   onToggleTheme: () => void;
   onToggleSidebar?: () => void;
+  onLogoClick?: () => void;
 }
 
-export default function Header({ theme, onToggleTheme, onToggleSidebar }: HeaderProps) {
+export default function Header({ theme, onToggleTheme, onToggleSidebar, onLogoClick }: HeaderProps) {
   const { data: session } = useSession();
   const [showAuth, setShowAuth] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
@@ -36,8 +38,8 @@ export default function Header({ theme, onToggleTheme, onToggleSidebar }: Header
               </button>
             )}
 
-            <div className="flex items-center gap-2.5">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent text-accent-foreground shadow-sm">
+            <button onClick={onLogoClick} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity text-left">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent text-accent-foreground shadow-sm shrink-0">
                 <Zap className="w-4 h-4" />
               </div>
               <div>
@@ -48,7 +50,7 @@ export default function Header({ theme, onToggleTheme, onToggleSidebar }: Header
                   MVP v1.0
                 </span>
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Right: Auth Buttons + Theme Toggle */}
@@ -63,13 +65,6 @@ export default function Header({ theme, onToggleTheme, onToggleSidebar }: Header
               </button>
             )}
 
-            <button
-              onClick={onToggleTheme}
-              className="p-2.5 rounded-xl border border-border text-foreground hover:bg-accent-light/50 active:scale-95 transition-all"
-              aria-label="Toggle theme"
-            >
-              {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </button>
           </div>
         </div>
       </header>

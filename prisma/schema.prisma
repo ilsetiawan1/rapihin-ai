@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ── NextAuth Models ──
@@ -43,10 +43,11 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  
+
   accounts      Account[]
   sessions      Session[]
   chats         ChatSession[]
+  telemetry     TelemetryLog[]
 }
 
 model VerificationToken {
@@ -59,21 +60,32 @@ model VerificationToken {
 
 // ── RapihinAI Models ──
 model ChatSession {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   title     String
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages  Message[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Message {
-  id            String      @id @default(cuid())
-  role          String      // 'user' or 'ai'
-  content       String
-  fileAttachment String?    // filename if any
-  chatSessionId String
-  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
-  createdAt     DateTime    @default(now())
+  id             String      @id @default(cuid())
+  role           String      // 'user' or 'assistant'
+  content        String
+  fileAttachment String?
+  chatSessionId  String
+  chatSession    ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  createdAt      DateTime    @default(now())
+}
+
+// ── KPI Telemetry (PRD Analytics) ──
+model TelemetryLog {
+  id           String   @id @default(cuid())
+  event        String   // e.g. "document_formatted", "compliance_checked"
+  templateId   String?  // which template was used
+  fileName     String?  // anonymized filename
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
 }

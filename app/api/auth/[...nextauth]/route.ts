@@ -1,12 +1,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
-
-// Global Prisma instance to prevent connection exhaustion in dev
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
-export const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+import { prisma } from "@/lib/prisma";
 
 const handler = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -22,7 +17,7 @@ const handler = NextAuth({
   callbacks: {
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.sub!;
+        (session.user as any).id = token.sub;
       }
       return session;
     },

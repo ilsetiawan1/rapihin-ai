@@ -14,7 +14,7 @@ import {
   User,
   Loader2,
 } from "lucide-react";
-import { useChat } from "ai/react";
+import { useChat } from "@ai-sdk/react";
 import TemplateSelector, { TemplateConfig } from "./TemplateSelector";
 
 // ── Types ──
@@ -51,18 +51,25 @@ export default function ChatPanel({
   onFileSelect,
   selectedFile,
 }: ChatPanelProps) {
-  const { messages, input: inputValue, handleInputChange, handleSubmit, isLoading: isTyping } = useChat();
+  // ── useChat: use sendMessage to send — v1 API ──
+  const { messages, sendMessage, status } = useChat({ api: "/api/chat" } as any) as any;
+  const isTyping = status === "streaming" || status === "submitted";
+
+  // ── Local state ──
+  const [inputValue, setInputValue] = useState("");
   const [chatMode, setChatMode] = useState(false);
   const [stagedFile, setStagedFile] = useState<File | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [selectedModel, setSelectedModel] = useState(AI_MODELS[0]);
   const [showModelMenu, setShowModelMenu] = useState(false);
+  const [showNoFileAlert, setShowNoFileAlert] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => { setMounted(true); inputRef.current?.focus(); }, []);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
@@ -87,42 +94,47 @@ export default function ChatPanel({
 
   const removeStagedFile = () => { setStagedFile(null); onFileSelect(null); };
 
-  const handleSend = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!inputValue.trim() && !stagedFile && !selectedFile) return;
+  const handleSend = async () => {
+    const text = inputValue.trim();
+    if (!text && !stagedFile && !selectedFile) return;
 
     // Switch to chat mode on first send
     if (!chatMode) setChatMode(true);
 
-    const lower = inputValue.toLowerCase();
+    const lower = text.toLowerCase();
     if (lower.includes("konfig") || lower.includes("pengaturan")) {
       setTimeout(() => setShowConfig(true), 500);
     } else if ((lower.includes("rapikan") || lower.includes("proses")) && (stagedFile || selectedFile)) {
       setTimeout(() => onProcessDocument(), 500);
     }
 
-    // Pass event to useChat handleSubmit
-    if (inputValue.trim()) {
-      handleSubmit(e as any);
+    // Send via useChat sendMessage (v1 API)
+    if (text) {
+      setInputValue("");
+      await sendMessage({ role: "user", content: text });
     }
+
     setStagedFile(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) { 
-      e.preventDefault(); 
-      handleSend(e as unknown as React.FormEvent); 
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
   const handleQuickProcess = () => {
-    if (!stagedFile && !selectedFile) { alert("Harap lampirkan file .docx terlebih dahulu!"); return; }
+    if (!stagedFile && !selectedFile) { 
+      setShowNoFileAlert(true); 
+      return; 
+    }
     onProcessDocument();
   };
 
   // ─── Shared Input Box ───────────────────────────────────────
   const InputBox = (
-    <div className={`w-full ${chatMode ? "" : "max-w-3xl"} relative z-10`}>
+    <div className="w-full max-w-3xl mx-auto relative z-10">
       <div className="flex flex-col bg-card border-2 border-border rounded-[2rem] shadow-xl focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/10 transition-all p-2">
 
         {/* Staged File Preview */}
@@ -150,9 +162,9 @@ export default function ChatPanel({
         <textarea
           ref={inputRef}
           value={inputValue}
-          onChange={handleInputChange}
+          onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder=""
+          placeholder="Tanya soal format dokumen, atau tekan tombol file untuk melampirkan berkas..."
           className="w-full bg-transparent text-base text-foreground placeholder:text-muted/70 focus:outline-none px-5 pt-4 resize-none max-h-40 min-h-[60px]"
           rows={1}
           style={{ fieldSizing: "content" } as React.CSSProperties}
@@ -210,7 +222,7 @@ export default function ChatPanel({
           {/* Send */}
           <button
             onClick={handleSend}
-            disabled={(!inputValue.trim() && !stagedFile && !selectedFile) || isTyping}
+            disabled={mounted ? Boolean((!inputValue?.trim() && !stagedFile && !selectedFile) || isTyping) : false}
             className="p-3 rounded-2xl bg-accent text-white disabled:opacity-30 hover:opacity-90 active:scale-95 transition-all shrink-0 ml-2 shadow-md shadow-accent/20"
           >
             {isTyping ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
@@ -275,57 +287,83 @@ export default function ChatPanel({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6 no-scrollbar">
-        {messages.map((msg) => (
-          <div key={msg.id}
-            className={`flex gap-3 animate-in fade-in slide-in-from-bottom-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-            {/* Avatar user only */}
-            {msg.role === "user" && (
-              <div className="w-8 h-8 rounded-full bg-accent-light text-accent border border-accent/30 flex items-center justify-center shrink-0 mt-1">
-                <User className="w-4 h-4" />
+        <div className="w-full max-w-3xl mx-auto space-y-8">
+          {messages.map((msg: any) => (
+            <div key={msg.id} className={`flex gap-4 animate-in fade-in slide-in-from-bottom-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+              {/* Avatar */}
+              <div className="shrink-0 mt-0.5">
+                {msg.role === "user" ? (
+                  <div className="w-8 h-8 rounded-full bg-accent-light text-accent flex items-center justify-center">
+                    <User className="w-4 h-4" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                )}
               </div>
-            )}
 
-            <div className={`flex flex-col gap-1 max-w-[78%] ${msg.role === "user" ? "items-end" : "items-start"}`}>
-              {/* Text */}
-              {msg.content && (
-                <div className={`text-sm leading-relaxed ${msg.role === "user"
-                  ? "bg-accent text-white px-4 py-3 rounded-2xl rounded-tr-sm"
-                  : "text-foreground py-1"}`}>
-                  {renderText(msg.content)}
-                </div>
-              )}
+              {/* Content */}
+              <div className={`flex-1 flex flex-col pt-1 ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                {msg.content && (
+                  <div className={`text-[15px] leading-relaxed whitespace-pre-wrap max-w-[85%] ${
+                    msg.role === "user" 
+                      ? "bg-accent text-white px-5 py-3 rounded-2xl rounded-tr-sm shadow-sm"
+                      : "text-foreground"
+                  }`}>
+                    {renderText(msg.content)}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        {/* Typing indicator */}
-        {isTyping && (
-          <div className="flex gap-2 animate-in fade-in pl-1">
-            <span className="w-2 h-2 rounded-full bg-muted animate-bounce" style={{ animationDelay: "0ms" }} />
-            <span className="w-2 h-2 rounded-full bg-muted animate-bounce" style={{ animationDelay: "150ms" }} />
-            <span className="w-2 h-2 rounded-full bg-muted animate-bounce" style={{ animationDelay: "300ms" }} />
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+          {/* Typing indicator */}
+          {isTyping && (
+            <div className="flex gap-4 animate-in fade-in">
+              <div className="shrink-0 mt-0.5">
+                <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center">
+                  <Bot className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="flex-1 flex flex-col pt-3">
+                <div className="flex gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} className="h-4" />
+        </div>
       </div>
 
-      {/* Config Panel */}
+
+      {/* Config Modal */}
       {showConfig && (
-        <div className="px-4 md:px-8 pb-3 animate-in fade-in slide-in-from-bottom-4">
-          <div className="bg-card border border-border shadow-lg rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-accent-light text-accent"><Settings className="w-4 h-4" /></div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm p-6 md:p-12 animate-in fade-in">
+          <div className="bg-card border border-border shadow-2xl rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 relative">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-border/50 shrink-0 bg-card z-10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-accent-light text-accent"><Settings className="w-5 h-5" /></div>
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">Pengaturan Format</h3>
-                  <p className="text-[10px] text-muted">Sesuaikan dengan panduan kampusmu</p>
+                  <h3 className="text-base font-bold text-foreground">Pengaturan Format</h3>
+                  <p className="text-xs text-muted">Sesuaikan dengan panduan kampusmu</p>
                 </div>
               </div>
-              <button onClick={() => setShowConfig(false)} className="p-1.5 hover:bg-muted/10 text-muted rounded-xl transition-colors">
-                <X className="w-4 h-4" />
+              <button onClick={() => setShowConfig(false)} className="p-2 hover:bg-muted/10 text-muted rounded-xl transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <TemplateSelector onConfigChange={onConfigChange} compact={false} />
+
+            {/* Modal Body (Scrollable) */}
+            <div className="flex-1 overflow-y-auto no-scrollbar p-6 pb-12">
+              <TemplateSelector onConfigChange={onConfigChange} compact={false} />
+            </div>
+            
           </div>
         </div>
       )}
@@ -334,6 +372,27 @@ export default function ChatPanel({
       <div className="px-4 md:px-8 pb-5 pt-2 shrink-0">
         {InputBox}
       </div>
+
+      {/* No File Alert Modal */}
+      {showNoFileAlert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in zoom-in-95">
+            <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center mb-4 mx-auto">
+              <FileText className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground text-center mb-2">Belum Ada Dokumen!</h3>
+            <p className="text-sm text-muted text-center mb-6 leading-relaxed">
+              Silakan lampirkan dokumen (.docx) terlebih dahulu melalui tombol klip di kiri bawah sebelum merapikan format.
+            </p>
+            <button 
+              onClick={() => setShowNoFileAlert(false)} 
+              className="w-full py-3 bg-accent text-white font-bold rounded-xl hover:opacity-90 active:scale-95 transition-all"
+            >
+              Mengerti
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
