@@ -108,23 +108,19 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <Header theme={theme} onToggleTheme={toggleTheme} />
 
-      {/* Main Sections Wrapper for scroll snap support */}
+      {/* Main Sections Wrapper */}
       <main className="flex-1">
         {/* Section 1: Free Formatter */}
-        <div className="snap-section">
-          <FreeFormatterSection
-            selectedFile={selectedFile}
-            setSelectedFile={setSelectedFile}
-            config={config}
-            setConfig={setConfig}
-            onProcessDocument={handleProcessDocument}
-          />
-        </div>
+        <FreeFormatterSection
+          selectedFile={selectedFile}
+          setSelectedFile={setSelectedFile}
+          config={config}
+          setConfig={setConfig}
+          onProcessDocument={handleProcessDocument}
+        />
 
         {/* Section 2: Pro Upsell */}
-        <div className="snap-section">
-          <ProUpsellSection onShowPricing={() => setShowPricing(true)} />
-        </div>
+        <ProUpsellSection onShowPricing={() => setShowPricing(true)} />
       </main>
 
       {/* Modals */}
