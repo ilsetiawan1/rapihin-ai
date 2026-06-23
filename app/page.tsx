@@ -1,11 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Sparkles } from "lucide-react";
+import {
+  Sparkles,
+  ShieldCheck,
+  Zap,
+  TrendingUp,
+  Bot,
+  Lock,
+  ArrowRight,
+} from "lucide-react";
 import Header from "@/components/shared/Header";
-import Sidebar from "@/components/shared/Sidebar";
-import { TemplateConfig } from "@/features/formatter/components/TemplateSelector";
-import ChatPanel from "@/features/formatter/components/ChatPanel";
+import Footer from "@/components/shared/Footer";
+import Dropzone from "@/features/formatter/components/Dropzone";
+import TemplateSelector, {
+  TemplateConfig,
+} from "@/features/formatter/components/TemplateSelector";
 import CompliancePanel from "@/features/formatter/components/CompliancePanel";
 import ProcessingModal from "@/features/formatter/components/ProcessingModal";
 
@@ -13,8 +23,6 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [config, setConfig] = useState<TemplateConfig | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [chatSessionId, setChatSessionId] = useState<number>(Date.now());
 
   // Modal & Processing States
   const [showModal, setShowModal] = useState(false);
@@ -33,7 +41,9 @@ export default function Home() {
   // Initialize theme from document attribute
   useEffect(() => {
     const activeTheme =
-      (document.documentElement.getAttribute("data-theme") as "light" | "dark") || "light";
+      (document.documentElement.getAttribute("data-theme") as
+        | "light"
+        | "dark") || "light";
     setTheme(activeTheme);
   }, []);
 
@@ -50,7 +60,7 @@ export default function Home() {
     setProcessStep(0);
     setIsFinished(false);
 
-    // 1. Start the visual ticker
+    // Visual ticker
     const interval = setInterval(() => {
       setProcessStep((prev) => {
         if (prev >= processingSteps.length - 1) {
@@ -61,7 +71,7 @@ export default function Home() {
       });
     }, 900);
 
-    // 2. Perform the actual API call
+    // Real API call
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
@@ -76,16 +86,14 @@ export default function Home() {
 
       const blob = await res.blob();
 
-      // Ensure at least some time has passed for UX
       clearInterval(interval);
       setProcessStep(processingSteps.length - 1);
-      
+
       setTimeout(() => {
         setIsProcessing(false);
         setIsFinished(true);
-        triggerRealDownload(blob, `RapihinAI_${selectedFile.name}`);
+        triggerDownload(blob, `RapihinAI_${selectedFile.name}`);
       }, 800);
-
     } catch (err) {
       console.error(err);
       clearInterval(interval);
@@ -94,7 +102,7 @@ export default function Home() {
     }
   };
 
-  const triggerRealDownload = (blob: Blob, filename: string) => {
+  const triggerDownload = (blob: Blob, filename: string) => {
     const element = document.createElement("a");
     element.href = URL.createObjectURL(blob);
     element.download = filename;
@@ -111,71 +119,189 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      {/* ── App Sidebar ── */}
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onToggle={() => setIsSidebarOpen(!isSidebarOpen)} 
-        onNewChat={() => setChatSessionId(Date.now())}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
+    <div className="flex flex-col min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <Header theme={theme} onToggleTheme={toggleTheme} />
 
-      {/* ── Main Content Area ── */}
-      <div className="flex-1 flex flex-col h-full min-w-0">
-        <Header 
-          theme={theme} 
-          onToggleTheme={toggleTheme} 
-          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
-          onLogoClick={() => setChatSessionId(Date.now())}
-        />
+      {/* ── Main Page Area ── */}
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 md:px-8 py-8 flex flex-col gap-14">
 
-        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 flex flex-col items-center">
-          <div className={`w-full h-full flex flex-col lg:flex-row gap-6 items-center justify-center transition-all duration-500 max-w-6xl`}>
-            
-            {/* Chat Panel Area */}
-            <div className={`flex-1 w-full h-full max-h-[800px] flex items-center justify-center transition-all duration-500`}>
-              <ChatPanel
-                key={chatSessionId}
-                onConfigChange={setConfig}
-                onProcessDocument={handleProcessDocument}
+        {/* ── Hero Section ── */}
+        <section className="text-center flex flex-col items-center gap-4 max-w-xl mx-auto mt-4">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent-light text-accent rounded-full text-xs font-semibold">
+            <Sparkles className="w-3.5 h-3.5" /> Otomatisasi Format Dokumen
+          </div>
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
+            Merapikan Berkas Skripsi Kurang dari 2 Menit
+          </h1>
+          <p className="text-sm md:text-base text-muted leading-relaxed max-w-md">
+            Unggah file{" "}
+            <code className="font-mono text-foreground font-semibold">
+              .docx
+            </code>{" "}
+            skripsi kamu, pilih template standar kampus, dan unduh dokumen rapi
+            seketika — <strong className="text-foreground">100% gratis</strong>.
+          </p>
+        </section>
+
+        {/* ── Core Tool Section (Free Feature) ── */}
+        <section className="w-full">
+          <div
+            className={`grid grid-cols-1 gap-6 items-start transition-all duration-500 ${
+              selectedFile ? "lg:grid-cols-12" : "max-w-3xl mx-auto grid-cols-1"
+            }`}
+          >
+            {/* Column Left: Dropzone + TemplateSelector */}
+            <div
+              className={`flex flex-col gap-6 ${selectedFile ? "lg:col-span-7" : "w-full"}`}
+            >
+              <Dropzone
                 onFileSelect={setSelectedFile}
                 selectedFile={selectedFile}
               />
+              <TemplateSelector onConfigChange={setConfig} />
             </div>
 
-            {/* Compliance Panel Area (Only shows when file is selected) */}
+            {/* Column Right: Compliance + Rapikan Button (only when file selected) */}
             {selectedFile && (
-              <div className="w-full lg:w-[360px] xl:w-[400px] shrink-0 flex flex-col gap-5 animate-in fade-in slide-in-from-right-8 duration-500 max-h-[800px]">
-                {config && <CompliancePanel fileName={selectedFile.name} config={config} file={selectedFile} />}
+              <div className="lg:col-span-5 flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                {config && (
+                  <CompliancePanel
+                    fileName={selectedFile.name}
+                    config={config}
+                    file={selectedFile}
+                  />
+                )}
 
                 <button
                   onClick={handleProcessDocument}
-                  className="ios-spring w-full py-4 bg-accent hover:bg-accent/90 text-accent-foreground rounded-2xl font-bold text-base shadow-lg shadow-accent/20 flex items-center justify-center gap-2 active:scale-98"
+                  disabled={!config}
+                  className="ios-spring w-full py-4 bg-accent hover:bg-accent/90 disabled:opacity-40 text-accent-foreground rounded-2xl font-bold text-base shadow-md shadow-accent/15 flex items-center justify-center gap-2 active:scale-98"
                 >
-                  <Sparkles className="w-5 h-5" /> Rapikan Dokumen
+                  <Sparkles className="w-5 h-5" /> Rapikan Dokumen Sekarang
                 </button>
-                
-                <div className="bg-accent-light/30 border border-accent/20 rounded-2xl p-4 text-xs text-foreground/80 text-center leading-relaxed">
-                  <p>Sistem AI membantu proses perbaikan secara lokal tanpa mengunggah isi dokumen ke server publik.</p>
-                </div>
+
+                <p className="text-center text-xs text-muted px-4">
+                  🔒 File kamu hanya diproses di memori server dan langsung
+                  dihapus setelah selesai.
+                </p>
               </div>
             )}
           </div>
-        </main>
-      </div>
+        </section>
 
-      {/* ── Fullscreen Overlay Modal ── */}
-      <ProcessingModal
-        show={showModal}
-        isProcessing={isProcessing}
-        processStep={processStep}
-        processingSteps={processingSteps}
-        isFinished={isFinished}
-        fileName={selectedFile?.name || "Skripsi.docx"}
-        onDownload={() => {}} // Download happens automatically now
-        onReset={resetForm}
-      />
+        {/* ── Processing Modal ── */}
+        <ProcessingModal
+          show={showModal}
+          isProcessing={isProcessing}
+          processStep={processStep}
+          processingSteps={processingSteps}
+          isFinished={isFinished}
+          fileName={selectedFile?.name || "Skripsi.docx"}
+          onDownload={() =>
+            selectedFile && triggerDownload(new Blob(), selectedFile.name)
+          }
+          onReset={resetForm}
+        />
+
+        {/* ── Benefit Cards ── */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-border pt-12">
+          <div className="flex gap-4 items-start">
+            <div className="p-2.5 rounded-xl bg-accent-light text-accent shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm text-foreground">
+                Garansi Privasi 100%
+              </h4>
+              <p className="text-xs text-muted mt-1 leading-relaxed">
+                File skripsi kamu hanya diproses di dalam memori RAM server dan
+                segera dihapus instan setelah file dikirim balik.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-4 items-start">
+            <div className="p-2.5 rounded-xl bg-accent-light text-accent shrink-0">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm text-foreground">
+                Sangat Instan & Gratis
+              </h4>
+              <p className="text-xs text-muted mt-1 leading-relaxed">
+                Pemrosesan format selesai dalam 15–30 detik. Gratis tanpa batas
+                karena berbasis rule-based engine, bukan AI.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-4 items-start">
+            <div className="p-2.5 rounded-xl bg-accent-light text-accent shrink-0">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm text-foreground">
+                Sesuai Panduan Kampus
+              </h4>
+              <p className="text-xs text-muted mt-1 leading-relaxed">
+                Margin 4-3-4-3 cm dan font dikonversi presisi hingga tingkat
+                satuan XML Word Processing. Siap langsung diserahkan.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Pro Upsell Section ── */}
+        <section className="relative border border-border rounded-3xl p-8 bg-card overflow-hidden">
+          {/* Decoration */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute -top-20 -right-20 w-64 h-64 bg-accent/5 rounded-full blur-3xl" />
+          </div>
+
+          <div className="relative flex flex-col md:flex-row items-start md:items-center gap-6">
+            <div className="p-3 rounded-2xl bg-accent-light text-accent shrink-0">
+              <Bot className="w-7 h-7" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-lg font-bold text-foreground">
+                  Perlu Perbaikan Konten? Coba Fitur Pro AI
+                </h2>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent text-white text-[10px] font-bold rounded-full">
+                  <Lock className="w-2.5 h-2.5" /> PRO
+                </span>
+              </div>
+              <p className="text-sm text-muted leading-relaxed max-w-xl">
+                Setelah layout rapi, masih ada{" "}
+                <em>typo</em>, kalimat berbelit, atau Daftar Isi yang nomornya
+                kacau? Fitur AI kami bisa memperbaiki substansi konten secara
+                otomatis — powered by{" "}
+                <strong className="text-foreground">Gemini 2.5 Flash</strong>.
+              </p>
+              <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1">
+                {[
+                  "AI Academic Reviewer & Auto-Fix",
+                  "Smart Citation Finder",
+                  "TOC Synchronizer",
+                ].map((f) => (
+                  <li
+                    key={f}
+                    className="flex items-center gap-1.5 text-xs text-muted"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-accent" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <button className="ios-spring shrink-0 flex items-center gap-2 px-5 py-3 bg-accent hover:opacity-90 text-white rounded-xl font-bold text-sm shadow-md shadow-accent/20 active:scale-95 whitespace-nowrap">
+              Coba Fitur Pro <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

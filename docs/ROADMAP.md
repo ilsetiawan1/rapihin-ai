@@ -57,12 +57,14 @@ gantt
 
 ---
 
-### F2 — Dropzone Upload & Compliance Checker
+### F2 — Halaman Utama: Dropzone Upload & Compliance Checker
 
-**Goal:** Pengguna dapat mengunggah dokumen dan langsung melihat laporan format sebelum merapikan.
+**Goal:** Halaman utama menampilkan fitur gratis (Dropzone + TemplateSelector + Compliance + Rapikan) sebagai antarmuka pertama yang dilihat pengguna — tanpa login, tanpa token.
 
 | Tugas | Status |
 |---|---|
+| `app/page.tsx` redesign: Dropzone + TemplateSelector + CompliancePanel + tombol Rapikan sebagai UI utama | ✅ |
+| Chat AI dipindah ke seksi **upsell Pro** di bawah halaman | ✅ |
 | `Dropzone.tsx`: drag & drop + validasi tipe file (`.docx` saja) & ukuran (≤ 20MB) | ✅ |
 | `CompliancePanel.tsx`: panggil `POST /api/check-compliance` dan tampilkan checklist | ✅ |
 | API `check-compliance`: parsing margin (`w:pgMar`), font (`w:rFonts`), spasi, struktur bab via regex | ✅ |
@@ -72,13 +74,14 @@ gantt
 
 ### F3 — Formatting Engine Gratis & Download
 
-**Goal:** Pengguna menekan satu tombol → dokumen langsung rapi → file terunduh otomatis.
+**Goal:** Pengguna menekan satu tombol → dokumen langsung rapi → file terunduh otomatis. Ini adalah **inti value proposition gratis** RapihinAI.
 
 | Tugas | Status |
 |---|---|
 | API `process-document`: override `w:pgMar` (margin), `w:rFonts` (font), `w:spacing` (spasi) via `jszip` + `xmldom` | ✅ |
 | `ProcessingModal.tsx`: animasi loading step-by-step yang interaktif | ✅ |
 | Trigger download otomatis file `.docx` hasil rapi ke browser | ✅ |
+| Seksi upsell Pro di bawah halaman utama (menampilkan fitur AI setelah pengguna berhasil rapikan) | ✅ |
 | **Audit & Bug Fixing**: uji dengan dokumen nyata (ada tabel, gambar, sitasi) | ⏳ Perlu dilakukan |
 
 ---

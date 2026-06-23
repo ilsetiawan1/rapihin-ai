@@ -8,9 +8,6 @@ Aplikasi ini menggunakan pendekatan *rule-based engine* murni melalui manipulasi
 
 ## 📸 Tampilan Aplikasi (UI Screenshots)
 
-> [!TIP]
-> Tempel gambar screenshot UI milikmu di bawah ini untuk mempercantik dokumentasi repositori GitHub.
-
 ### Tampilan Desktop
 <!-- TEMPEL SCREENSHOT DESKTOP KAMU DI SINI -->
 <!-- Contoh: ![Desktop View](/public/desktop_screenshot.png) -->
