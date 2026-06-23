@@ -6,9 +6,10 @@ import { FileText, UploadCloud, X, CheckCircle2 } from "lucide-react";
 interface DropzoneProps {
   onFileSelect: (file: File | null) => void;
   selectedFile: File | null;
+  className?: string;
 }
 
-export default function Dropzone({ onFileSelect, selectedFile }: DropzoneProps) {
+export default function Dropzone({ onFileSelect, selectedFile, className = "" }: DropzoneProps) {
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,12 +80,9 @@ export default function Dropzone({ onFileSelect, selectedFile }: DropzoneProps) 
       onDragOver={handleDrag}
       onDragLeave={handleDrag}
       onDrop={handleDrop}
-      className={`ios-spring group relative flex flex-col items-center justify-center border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer min-h-[260px] md:min-h-[300px] bg-card text-card-foreground
-        ${
-          isDragActive
-            ? "border-accent bg-accent-light scale-102"
-            : "border-border hover:border-accent hover:bg-accent-light/30"
-        }
+      className={`ios-spring group relative flex flex-col items-center justify-center border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer bg-card text-card-foreground
+        ${className || "min-h-[260px] md:min-h-[300px]"}
+        ${isDragActive ? "border-accent bg-accent-light scale-102" : "border-border hover:border-accent hover:bg-accent-light/30"}
         ${selectedFile ? "cursor-default" : ""}
       `}
     >

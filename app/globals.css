@@ -85,6 +85,17 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+@media (min-width: 1024px) {
+  html {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+  }
+  .snap-section {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+}
+
 /* Custom Micro-interactions */
 .ios-spring {
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);

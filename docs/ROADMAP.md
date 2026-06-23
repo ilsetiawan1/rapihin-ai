@@ -65,6 +65,8 @@ gantt
 |---|---|
 | `app/page.tsx` redesign: Dropzone + TemplateSelector + CompliancePanel + tombol Rapikan sebagai UI utama | ✅ |
 | Chat AI dipindah ke seksi **upsell Pro** di bawah halaman | ✅ |
+| Refactoring modular: pisahkan `FreeFormatterSection` dan `ProUpsellSection` | ✅ |
+| Layout desktop 100vh per section dengan CSS scroll snapping | ✅ |
 | `Dropzone.tsx`: drag & drop + validasi tipe file (`.docx` saja) & ukuran (≤ 20MB) | ✅ |
 | `CompliancePanel.tsx`: panggil `POST /api/check-compliance` dan tampilkan checklist | ✅ |
 | API `check-compliance`: parsing margin (`w:pgMar`), font (`w:rFonts`), spasi, struktur bab via regex | ✅ |
