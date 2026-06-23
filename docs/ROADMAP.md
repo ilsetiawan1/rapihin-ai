@@ -1,6 +1,6 @@
 # Development Roadmap - RapihinAI MVP
 
-Roadmap ini disusun berdasarkan prioritas pengerjaan guna memastikan integrasi yang lancar antara UI/UX di sisi Frontend, sistem otentikasi Google OAuth, dan *AI Core Processing Engine* (Gemini 2.5 Flash).
+Roadmap ini disusun menggunakan pendekatan **"User Experience First"**. Fokus utama adalah menyelesaikan seluruh fungsionalitas dan antarmuka pengguna (termasuk fitur gratis dan Pro) hingga stabil dan dideploy, baru kemudian membangun panel administrasi / CMS Backoffice untuk manajemen internal.
 
 ---
 
@@ -8,92 +8,88 @@ Roadmap ini disusun berdasarkan prioritas pengerjaan guna memastikan integrasi y
 
 ```mermaid
 gantt
-    title Jadwal Implementasi RapihinAI
+    title Jadwal Implementasi RapihinAI (User Experience First)
     dateFormat  YYYY-MM-DD
-    section Fase 1: Fondasi
-    Setup Proyek, NextAuth, & Prisma    :active, des1, 2026-06-23, 3d
-    section Fase 2: Backend Core
-    Layout Engine & XML Parser           : des2, after des1, 4d
-    AI Reviewer & TOC Sync (Gemini)      : des3, after des2, 4d
-    section Fase 3: Frontend UI
-    Komponen Dashboard & Chat Panel     : des4, after des3, 4d
-    section Fase 4: Integrasi API
-    Auth & Token System (Google OAuth)  : des5, after des4, 3d
-    section Fase 5: Polish & Uji
-    Uji XML Preservasi & Deploy          : des6, after des5, 3d
+    section Fase 1: User Experience & Core Engine
+    Setup Fondasi & Database            :active, des1, 2026-06-23, 3d
+    UI iOS-Style & Dropzone             : des2, after des1, 4d
+    Formatting Engine Gratis & Compliance: des3, after des2, 4d
+    NextAuth & Google Login             : des4, after des3, 3d
+    AI Gemini 2.5 Pro Features          : des5, after des4, 4d
+    Uji Coba & Deploy Fitur User        : des6, after des5, 3d
+    section Fase 2: Backoffice & Monitoring (CMS)
+    Dashboard Analytics Dokumen         : des7, after des6, 3d
+    User & Token Management (Admin Tool): des8, after des7, 3d
+    Template Preset Management          : des9, after des8, 2d
 ```
 
 ---
 
 ## 🚀 Rincian Fase Pengerjaan
 
-### Fase 1: Inisialisasi & Setup Fondasi (Foundation Setup)
+### Fase 1: User Experience & Core Engine (Prioritas Utama)
+
+Fase ini bertujuan untuk menyelesaikan seluruh pengalaman pengguna dari ujung ke ujung, mulai dari landing page hingga pengunduhan hasil revisi AI.
+
+#### 1. Inisialisasi & Setup Fondasi (Foundation Setup)
 * **Goal:** Menyiapkan dependensi, NextAuth, schema database PostgreSQL, dan boilerplate Next.js.
 * **Tugas:**
-  1. **NPM Packages Installation:**
-     * File Parsing: `npm i mammoth jszip xmldom`
-     * State & API: `npm i @tanstack/react-query`
-     * Database: `npm i @prisma/client` & `npm i -D prisma`
-     * Auth: `npm i next-auth`
-     * AI: `npm i ai @ai-sdk/google`
-  2. **Tailwind CSS v4 Configuration:** Konfigurasi variabel tema di global CSS (zinc, accent blue, border-radius, font-sans).
-  3. **Database & NextAuth Init:**
-     * Setup `prisma/schema.prisma` sesuai dengan skema otentikasi standard NextAuth + field `User.tokens`.
-     * Jalankan migrasi awal: `npx prisma migrate dev --name init`.
-  4. **Providers Integration:** Setup `<SessionProvider>` NextAuth dan `<QueryClientProvider>` React Query di `app/layout.tsx`.
+  * **NPM Packages Installation:** `npm i mammoth jszip xmldom @tanstack/react-query @prisma/client next-auth ai @ai-sdk/google` (dan development dependencies seperti `prisma`).
+  * **Tailwind CSS v4 Configuration:** Konfigurasi variabel tema di global CSS (zinc, accent blue, border-radius, font-sans).
+  * **Database Init:** Setup skema Prisma PostgreSQL (`DATABASE.md`) dan jalankan migrasi awal (`npx prisma migrate dev --name init`).
+  * **Providers Integration:** Setup `<SessionProvider>` NextAuth dan `<QueryClientProvider>` React Query di `app/layout.tsx`.
+
+#### 2. Frontend UI Components (iOS Style Interface)
+* **Goal:** Membangun antarmuka pengguna berbasis Next.js Client Component dengan visual minimalis premium ala iOS.
+* **Tugas:**
+  * **Unified Dashboard Layout (`app/page.tsx`):** Integrasi `Sidebar` (riwayat aktivitas), `Header` utama, dan tombol *Theme Toggle* (gelap/terang).
+  * **AI Chat Panel (`components/features/ChatPanel.tsx`):** Antarmuka chat asisten AI interaktif dengan status online pulse, quick action button, dan area upload dokumen.
+  * **Compliance Report Card (`components/features/CompliancePanel.tsx`):** Visual status kepatuhan margin, font, dan bab dokumen setelah file di-parse secara instan.
+
+#### 3. Formatting Engine Gratis (Rule-Based) & Compliance Parser
+* **Goal:** Implementasi pemformatan margin/font/spasi gratis serta analisis kepatuhan dokumen.
+* **Tugas:**
+  * **XML Layout Formatter (`services/formatter/docx-formatter.ts`):** Mengurai ZIP `.docx` via `jszip` dan memanipulasi node XML (`w:pgMar`, `w:rFonts`, `w:spacing`) via `xmldom`.
+  * **Compliance Parser:** Mengurai draf skripsi secara instan menggunakan `mammoth.js` dan regex terstruktur untuk memvalidasi struktur Bab.
+
+#### 4. Autentikasi NextAuth & Google Login
+* **Goal:** Memungkinkan integrasi login satu klik menggunakan akun Google untuk mengakses fitur Pro.
+* **Tugas:**
+  * **Google OAuth Gateway:** Integrasikan NextAuth API handler di `/api/auth/[...nextauth]/route.ts`.
+  * **Route Protection:** Batasi akses fitur premium AI (Academic Reviewer, Citation Finder, TOC Sync) bagi pengguna non-login.
+
+#### 5. Integrasi Fitur AI Pro (Gemini 2.5 Flash) & Token-Based System
+* **Goal:** Menghubungkan asisten AI ke dokumen untuk perbaikan teks dan sinkronisasi Daftar Isi.
+* **Tugas:**
+  * **AI Academic Reviewer:** Mengirimkan run-element teks (`<w:t>`) ke Gemini untuk perbaikan typo dan tata bahasa baku tanpa merusak format style Word.
+  * **TOC Synchronizer:** Pindai lokasi bab, estimasikan halaman, dan update data nomor halaman Daftar Isi di dalam XML.
+  * **Token System:** Implementasikan logika pemotongan Token di database saat fitur Pro berhasil dijalankan.
+
+#### 6. Uji Coba, Keamanan & Deployment Fitur User
+* **Goal:** Verifikasi stabilitas format dokumen dan rilis ke produksi.
+* **Tugas:**
+  * **XML Integrity Verification:** Uji dengan berkas skripsi asli yang berisi tabel, gambar, dan sitasi untuk menjamin file tidak corrupt.
+  * **Vercel/Netlify Deploy:** Hubungkan repo GitHub ke hosting dan setup environment variables.
 
 ---
 
-### Fase 2: Backend Core Engine Development (Otak Aplikasi)
-* **Goal:** Membuat modul pemformatan berkas biner `.docx` murni (Rule-Based) dan modul AI (Gemini 2.5 Flash).
+### Fase 2: Backoffice & Monitoring (CMS Admin)
+
+Dikerjakan secara menyeluruh setelah seluruh fitur pengguna di Fase 1 berjalan dengan stabil dan bebas dari bug.
+
+#### 1. Dashboard Analytics Dokumen
+* **Goal:** Menyediakan dasbor statistik internal bagi administrator untuk memantau performa bisnis dan operasional.
 * **Tugas:**
-  1. **XML Layout Formatter (`services/formatter/docx-formatter.ts`):**
-     * Bongkar berkas zip `.docx` di memori menggunakan `jszip`.
-     * Terapkan DOM manipulation (`xmldom`) untuk menimpa nilai margin (`w:pgMar`), font (`w:rFonts`), dan spasi (`w:spacing`) pada XML.
-  2. **AI Academic Reviewer (Gemini Integration):**
-     * Setup route `/api/chat` menggunakan SDK Vercel AI dengan model `gemini-2.5-flash`.
-     * Buat skrip ekstraksi run element teks (`<w:t>`) secara selektif agar gaya tulisan tidak hilang saat AI mengganti teks.
-  3. **TOC Synchronizer Logic:**
-     * Buat pemindai posisi bab dan sub-bab menggunakan regex.
-     * Buat algoritma estimasi nomor halaman, kemudian perbarui XML Daftar Isi dokumen.
+  * **Visualisasi Metrik:** Rancang grafik tren harian total pengguna baru, jumlah file yang diproses (North Star Metric), rata-rata durasi pemrosesan, dan rasio sukses.
+  * **Audit Logging:** Halaman log aktivitas backend untuk memantau error pemrosesan file atau kegagalan API.
 
----
-
-### Fase 3: Frontend UI Components (iOS Style Interface)
-* **Goal:** Membangun antarmuka pengguna berbasis Next.js Client Component dengan visual minimalis premium.
+#### 2. Management User & Token (Internal Admin Tool)
+* **Goal:** Memungkinkan administrator mencari user dan menyesuaikan saldo token secara manual.
 * **Tugas:**
-  1. **Unified Dashboard Layout (`app/page.tsx`):**
-     * Hubungkan `Sidebar` (untuk riwayat aktivitas) dan `Header` utama.
-     * Sediakan tombol *Theme Toggle* gelap/terang.
-  2. **AI Chat Panel (`components/features/ChatPanel.tsx`):**
-     * Buat interface chat asisten AI interaktif dengan status online pulse, quick action button, dan area upload dokumen.
-  3. **Compliance Report Card (`components/features/CompliancePanel.tsx`):**
-     * Rancang visual status kepatuhan margin, font, dan bab dokumen setelah file di-parse secara instan.
+  * **Search & Filter:** Form pencarian pengguna berdasarkan alamat email atau nama.
+  * **Manipulasi Saldo Token:** Aksi admin (Button tambah/kurang token) dengan verifikasi log audit transaksi untuk kebutuhan customer support, refund, atau pemberian bonus khusus.
 
----
-
-### Fase 4: Autentikasi, API Routes, & Monetisasi Token
-* **Goal:** Menghubungkan frontend-backend secara aman dengan autentikasi Google OAuth dan sistem saldo Token.
+#### 3. Template Preset Management
+* **Goal:** Mengelola preset format kampus tanpa harus mengubah kode backend secara manual.
 * **Tugas:**
-  1. **Google OAuth Gateway:**
-     * Integrasikan NextAuth API handler di `/api/auth/[...nextauth]/route.ts`.
-     * Batasi akses fitur premium AI (Academic Reviewer, Citation Finder, TOC Sync) wajib login terlebih dahulu.
-  2. **Token Management & Billing API:**
-     * Implementasikan pemotongan Token di database saat fitur Pro berhasil dijalankan.
-     * Buat visual modal pengisian saldo Token (`PricingModal.tsx`) di UI.
-  3. **API Integration & File Download:**
-     * Hubungkan React Query mutation (`useFormatDocument`) ke `/api/process-document`.
-     * Terapkan trigger download native browser saat respon biner dikembalikan secara aman.
-
----
-
-### Fase 5: Uji Coba, Keamanan, & Deployment (Testing & Polish)
-* **Goal:** Menguji kinerja formatting pada file nyata, preservasi tag XML, dan rilis ke produksi.
-* **Tugas:**
-  1. **XML Integrity Verification:**
-     * Uji dokumen skripsi asli dengan tabel, gambar, sitasi Mendeley, dan rumus matematika.
-     * Pastikan format internal Microsoft Word tidak corrupt pasca manipulasi XML.
-  2. **Security Audit:**
-     * Pastikan pemrosesan file murni ephemeral (in-memory buffer) tanpa jejak file di server hosting.
-  3. **Production Deployment:**
-     * Hubungkan ke Vercel/Netlify dengan setup environment variables (`DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GEMINI_API_KEY`, `NEXTAUTH_SECRET`).
+  * **Dynamic Toggle:** Menyediakan tabel berisi preset format kampus (standard akademik, preset kampus tertentu) dengan opsi untuk mengaktifkan/menonaktifkan preset kampus tersebut secara dinamis dari database.

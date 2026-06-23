@@ -69,6 +69,12 @@ graph TD
 * **Smart Citation Finder:** Membaca konteks teks, mendeteksi klaim yang membutuhkan sitasi ilmiah, lalu mencari dan merekomendasikan artikel jurnal ilmiah nasional/internasional yang relevan.
 * **Table of Contents (TOC) Synchronizer:** Menganalisis inkonsistensi nomor halaman pada Daftar Isi (TOC) dengan posisi riil Bab/Sub-bab di dalam dokumen skripsi, lalu memperbaikinya secara otomatis.
 
+### C. Panel Administrasi (CMS Admin / Backoffice)
+Untuk penanganan operasional internal dan customer support, sistem menyediakan area administrasi backoffice dengan fungsionalitas:
+1. **Dasbor Metrik Ringkas:** Memantau metrik bisnis utama secara real-time, seperti jumlah total pengguna baru terdaftar dan jumlah dokumen yang berhasil diproses (North Star Metric).
+2. **Manajemen User & Token:** Memungkinkan Admin untuk melakukan pencarian profil pengguna menggunakan alamat email, serta menambah atau mengurangi saldo token mereka secara manual (untuk kebutuhan refund, kompensasi gangguan teknis, atau gift token).
+3. **Manajemen Template Preset:** Mengaktifkan atau menonaktifkan preset pedoman kampus secara dinamis dari database agar daftar pilihan template di sisi user tetap up-to-date.
+
 ---
 
 ## 5. Monetisasi & Token-Based System
